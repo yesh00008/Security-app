@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package com.guardix.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.guardix.grpc.phishing";
+option java_outer_classname = "PhishingProto";
+
+// Phishing Detection Service
+service PhishingService {
+    rpc CheckPhishing(PhishingRequest) returns (PhishingResponse);
+    rpc BatchCheckPhishing(BatchPhishingRequest) returns (BatchPhishingResponse);
+}
+
+// Request message for phishing detection
+message PhishingRequest {
+    string url = 1;
+    string text_content = 2;
+    string domain = 3;
+    map<string, string> headers = 4;
+    string user_agent = 5;
+}
+
+// Response message for phishing detection
+message PhishingResponse {
+    bool is_phishing = 1;
+    double confidence = 2;
+    string risk_level = 3;
+    repeated string suspicious_indicators = 4;
+    map<string, string> analysis_details = 5;
+    int64 analysis_timestamp = 6;
+}
+
+// Batch request for multiple URLs/texts
+message BatchPhishingRequest {
+    repeated PhishingRequest requests = 1;
+}
+
+// Batch response for multiple URLs/texts
+message BatchPhishingResponse {
+    repeated PhishingResponse responses = 1;
+}

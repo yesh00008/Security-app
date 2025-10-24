@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package com.guardix.grpc;
+
+option java_multiple_files = true;
+option java_package = "com.guardix.grpc.intrusion";
+option java_outer_classname = "IntrusionProto";
+
+// Intrusion Detection Service
+service IntrusionService {
+    rpc DetectIntrusion(IntrusionRequest) returns (IntrusionResponse);
+    rpc StreamIntrusionDetection(stream IntrusionRequest) returns (stream IntrusionResponse);
+    rpc GetIntrusionHistory(HistoryRequest) returns (HistoryResponse);
+}
+
+// Request message for intrusion detection
+message IntrusionRequest {
+    string device_id = 1;
+    NetworkTraffic network_traffic = 2;
+    SystemMetrics system_metrics = 3;
+    repeated string recent_activities = 4;
+    int64 timestamp = 5;
+}
+
+// Network traffic data
+message NetworkTraffic {
+    int64 bytes_in = 1;
+    int64 bytes_out = 2;
+    int32 connections_count = 3;
+    repeated string suspicious_ips = 4;
+    repeated string blocked_domains = 5;
+    int32 failed_auth_attempts = 6;
+}
+
+// System metrics
+message SystemMetrics {
+    double cpu_usage = 1;
+    double memory_usage = 2;
+    double disk_io = 3;
+    int32 process_count = 4;
+    repeated string running_services = 5;
+}
+
+// Response message for intrusion detection
+message IntrusionResponse {
+    bool intrusion_detected = 1;
+    string threat_level = 2;
+    double confidence_score = 3;
+    repeated ThreatIndicator threat_indicators = 4;
+    repeated string recommended_actions = 5;
+    int64 detection_timestamp = 6;
+}
+
+// Threat indicator details
+message ThreatIndicator {
+    string indicator_type = 1;
+    string description = 2;
+    double severity_score = 3;
+    string source = 4;
+}
+
+// Request for intrusion history
+message HistoryRequest {
+    string device_id = 1;
+    int64 start_timestamp = 2;
+    int64 end_timestamp = 3;
+    int32 limit = 4;
+}
+
+// Response with intrusion history
+message HistoryResponse {
+    repeated IntrusionEvent events = 1;
+    int32 total_count = 2;
+}
+
+// Intrusion event details
+message IntrusionEvent {
+    string event_id = 1;
+    string device_id = 2;
+    string threat_level = 3;
+    string description = 4;
+    int64 timestamp = 5;
+    bool resolved = 6;
+}

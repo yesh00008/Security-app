@@ -1,0 +1,58 @@
+# Java/Gradle
+*.class
+*.jar
+*.war
+*.ear
+.gradle/
+build/
+target/
+out/
+*.log
+
+# Android
+*.apk
+*.ap_
+*.dex
+local.properties
+.idea/
+*.iml
+.gradle
+captures/
+.externalNativeBuild
+.cxx
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+*.egg-info/
+dist/
+*.egg
+
+# IDE
+.vscode/
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Sensitive files
+*.keystore
+*.jks
+local.properties
+
+# Misc
+*.bak
+*.tmp
+*.temp
+.cache/
+
+# Gradle distribution
+gradle-*.zip
+gradle-*-bin.zip
+gradle-*-all.zip

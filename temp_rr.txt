@@ -1,0 +1,67 @@
+package com.guardix.mobile.data.realtimepackage com.guardix.mobile.data.realtime
+
+
+
+import kotlinx.coroutines.CoroutineScopeimport kotlinx.coroutines.CoroutineScope
+
+import kotlinx.coroutines.flow.Flowimport kotlinx.coroutines.flow.Flow
+
+import kotlinx.coroutines.flow.flowOf
+
+package com.guardix.mobile.data.realtime
+
+interface RealtimeRepository {
+
+    val systemMetricsFlow: Flow<SystemMetrics>import kotlinx.coroutines.CoroutineScope
+
+    val securityEventsFlow: Flow<SecurityEvent>import kotlinx.coroutines.flow.Flow
+
+    val processInfoFlow: Flow<List<ProcessInfo>>import kotlinx.coroutines.flow.flowOf
+
+    
+
+    fun connect()interface RealtimeRepository {
+
+    fun disconnect()    val systemMetricsFlow: Flow<SystemMetrics>
+
+}    val securityEventsFlow: Flow<SecurityEvent>
+
+    val processInfoFlow: Flow<List<ProcessInfo>>
+
+class RealtimeRepositoryImpl(    
+
+    private val coroutineScope: CoroutineScope    fun connect()
+
+) : RealtimeRepository {    fun disconnect()
+
+    }
+
+    override val systemMetricsFlow: Flow<SystemMetrics> = flowOf()
+
+    override val securityEventsFlow: Flow<SecurityEvent> = flowOf()class RealtimeRepositoryImpl(
+
+    override val processInfoFlow: Flow<List<ProcessInfo>> = flowOf()    private val coroutineScope: CoroutineScope
+
+    ) : RealtimeRepository {
+
+    override fun connect() {    
+
+        // Implementation for connecting to backend    override val systemMetricsFlow: Flow<SystemMetrics> = flowOf() // Simplified for compilation
+
+    }    override val securityEventsFlow: Flow<SecurityEvent> = flowOf() // Simplified for compilation
+
+        override val processInfoFlow: Flow<List<ProcessInfo>> = flowOf() // Simplified for compilation
+
+    override fun disconnect() {    
+
+        // Implementation for disconnecting from backend    override fun connect() {
+
+    }        // Simplified for compilation
+
+}    }
+    
+    override fun disconnect() {
+        // Simplified for compilation
+    }
+}
+

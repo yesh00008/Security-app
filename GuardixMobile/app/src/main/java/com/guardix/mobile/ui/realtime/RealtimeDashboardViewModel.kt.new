@@ -1,0 +1,97 @@
+package com.guardix.mobile.ui.realtime
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.guardix.mobile.data.realtime.*
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+@HiltViewModel
+class RealtimeDashboardViewModel @Inject constructor(
+    private val realtimeRepository: RealtimeRepository
+) : ViewModel() {
+    
+    // UI state for the dashboard
+    private val _uiState = MutableStateFlow(RealtimeDashboardState())
+    val uiState: StateFlow<RealtimeDashboardState> = _uiState.asStateFlow()
+    
+    init {
+        // Connect to WebSocket
+        realtimeRepository.connect()
+        
+        // Collect system metrics
+        viewModelScope.launch {
+            realtimeRepository.systemMetricsFlow.collect { metrics ->
+                _uiState.update { state ->
+                    state.copy(
+                        cpuUsage = metrics.cpu.usagePercent,
+                        memoryUsage = metrics.memory.percent,
+                        diskUsage = metrics.disk.percent,
+                        networkSent = formatBytes(metrics.network.bytesSent),
+                        networkReceived = formatBytes(metrics.network.bytesReceived),
+                        lastUpdated = metrics.timestamp
+                    )
+                }
+            }
+        }
+        
+        // Collect security events
+        viewModelScope.launch {
+            realtimeRepository.securityEventsFlow.collect { event ->
+                _uiState.update { state ->
+                    val updatedEvents = listOf(event.toUI()) + state.securityEvents.take(49)
+                    state.copy(securityEvents = updatedEvents)
+                }
+            }
+        }
+        
+        // Collect process info
+        viewModelScope.launch {
+            realtimeRepository.processInfoFlow.collect { processes ->
+                _uiState.update { state ->
+                    state.copy(processes = processes.map { it.toUI() })
+                }
+            }
+        }
+    }
+    
+    fun refresh() {
+        // Refresh data if needed
+    }
+    
+    override fun onCleared() {
+        super.onCleared()
+        realtimeRepository.disconnect()
+    }
+    
+    private fun formatBytes(bytes: Long): String {
+        val units = arrayOf("B", "KB", "MB", "GB", "TB")
+        var size = bytes.toDouble()
+        var unitIndex = 0
+        
+        while (size > 1024 && unitIndex < units.size - 1) {
+            size /= 1024
+            unitIndex++
+        }
+        
+        return "%.1f %s".format(size, units[unitIndex])
+    }
+}
+
+data class RealtimeDashboardState(
+    val cpuUsage: Float = 0f,
+    val memoryUsage: Float = 0f,
+    val diskUsage: Float = 0f,
+    val networkSent: String = "0 B",
+    val networkReceived: String = "0 B",
+    val downloadSpeed: Float = 0f,
+    val uploadSpeed: Float = 0f,
+    val networkInterfaces: List<String> = emptyList(),
+    val lastUpdated: String = "",
+    val securityEvents: List<SecurityEventUI> = emptyList(),
+    val processes: List<ProcessInfoUI> = emptyList(),
+    val isLoading: Boolean = true,
+    val error: String? = null
+)

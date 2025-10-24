@@ -1,0 +1,714 @@
+package com.guardix.mobile.ui.screens
+
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.guardix.mobile.data.remote.NetworkManager
+import com.guardix.mobile.data.remote.EnhancedGuardixApiClient
+import com.guardix.mobile.data.remote.EnhancedGuardixRepository
+import com.guardix.mobile.data.remote.GuardixApiService
+import com.guardix.mobile.ui.components.NeumorphicCard
+import com.guardix.mobile.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+data class DashboardMetric(
+    val title: String,
+    val value: String,
+    val change: String? = null,
+    val icon: ImageVector,
+    val color: Color,
+    val isPositiveChange: Boolean = true
+)
+
+data class QuickAction(
+    val title: String,
+    val subtitle: String,
+    val icon: ImageVector,
+    val color: Color,
+    val enabled: Boolean = true,
+    val onClick: () -> Unit
+)
+
+data class SecurityAlert(
+    val title: String,
+    val message: String,
+    val severity: AlertSeverity,
+    val timestamp: String,
+    val actionText: String? = null,
+    val onAction: (() -> Unit)? = null
+)
+
+enum class AlertSeverity(val color: Color) {
+    LOW(SuccessGreen),
+    MEDIUM(WarningOrange),
+    HIGH(ErrorRed),
+    INFO(LightBlue)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EnhancedDashboardScreen(
+    onNavigateToSecurity: () -> Unit = {},
+    onNavigateToPerformance: () -> Unit = {},
+    onNavigateToNetwork: () -> Unit = {},
+    onNavigateToStorage: () -> Unit = {},
+    onNavigateToTools: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    
+    // Wire backend client and repository (without DI in this composable)
+    val apiService = remember { EnhancedGuardixApiClient.retrofit.create(GuardixApiService::class.java) }
+    val repository = remember { EnhancedGuardixRepository(context, apiService, NetworkManager(context), EnhancedGuardixApiClient.moshi) }
+    
+    // State management
+    var isLoading by remember { mutableStateOf(true) }
+    var securityScore by remember { mutableStateOf(0) }
+    var connectionStatus by remember { mutableStateOf("Checking...") }
+    var lastSyncTime by remember { mutableStateOf("") }
+    
+    // Real-time metrics
+    var memoryUsage by remember { mutableStateOf("--") }
+    var cpuUsage by remember { mutableStateOf("--") }
+    var networkUsage by remember { mutableStateOf("--") }
+    var storageUsage by remember { mutableStateOf("--") }
+    
+    // Security alerts
+    var securityAlerts by remember { mutableStateOf<List<SecurityAlert>>(emptyList()) }
+    
+    // Animated security score
+    val animatedScore by animateIntAsState(
+        targetValue = securityScore,
+        animationSpec = tween(durationMillis = 2000, easing = EaseOutCubic)
+    )
+    
+    // Load dashboard data
+    LaunchedEffect(Unit) {
+        scope.launch {
+            loadDashboardData(
+                repository = repository,
+                onSecurityScore = { securityScore = it },
+                onConnectionStatus = { connectionStatus = it },
+                onMemoryUsage = { memoryUsage = it },
+                onCpuUsage = { cpuUsage = it },
+                onNetworkUsage = { networkUsage = it },
+                onStorageUsage = { storageUsage = it },
+                onSecurityAlerts = { securityAlerts = it },
+                onLastSync = { lastSyncTime = it },
+                onComplete = { isLoading = false }
+            )
+        }
+    }
+    
+    // Auto-refresh every 30 seconds
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30000)
+            scope.launch {
+                loadDashboardData(
+                    repository = repository,
+                    onSecurityScore = { securityScore = it },
+                    onConnectionStatus = { connectionStatus = it },
+                    onMemoryUsage = { memoryUsage = it },
+                    onCpuUsage = { cpuUsage = it },
+                    onNetworkUsage = { networkUsage = it },
+                    onStorageUsage = { storageUsage = it },
+                    onSecurityAlerts = { securityAlerts = it },
+                    onLastSync = { lastSyncTime = it },
+                    onComplete = { }
+                )
+            }
+        }
+    }
+    
+    // Dashboard metrics
+    val metrics = listOf(
+        DashboardMetric(
+            title = "Memory",
+            value = memoryUsage,
+            change = "+2.1%",
+            icon = Icons.Default.Memory,
+            color = LightBlue,
+            isPositiveChange = false
+        ),
+        DashboardMetric(
+            title = "CPU",
+            value = cpuUsage,
+            change = "-1.5%",
+            icon = Icons.Default.Speed,
+            color = SuccessGreen
+        ),
+        DashboardMetric(
+            title = "Network",
+            value = networkUsage,
+            change = "+5.2%",
+            icon = Icons.Default.NetworkCheck,
+            color = Cyan,
+            isPositiveChange = false
+        ),
+        DashboardMetric(
+            title = "Storage",
+            value = storageUsage,
+            change = "-8.1%",
+            icon = Icons.Default.Storage,
+            color = WarningOrange
+        )
+    )
+    
+    // Quick actions
+    val quickActions = listOf(
+        QuickAction(
+            title = "Quick Scan",
+            subtitle = "Malware & threats",
+            icon = Icons.Default.Security,
+            color = LightBlue,
+            onClick = onNavigateToSecurity
+        ),
+        QuickAction(
+            title = "Boost RAM",
+            subtitle = "Free memory",
+            icon = Icons.Default.Memory,
+            color = SuccessGreen,
+            onClick = onNavigateToPerformance
+        ),
+        QuickAction(
+            title = "Clean Storage",
+            subtitle = "Remove junk",
+            icon = Icons.Default.CleaningServices,
+            color = WarningOrange,
+            onClick = onNavigateToStorage
+        ),
+        QuickAction(
+            title = "Network Tools",
+            subtitle = "Speed & analysis",
+            icon = Icons.Default.Wifi,
+            color = Cyan,
+            onClick = onNavigateToNetwork
+        )
+    )
+    
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        GradientStart.copy(alpha = 0.05f),
+                        BackgroundPrimary
+                    )
+                )
+            )
+            .padding(16.dp)
+    ) {
+        // Header with sync status
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Security Dashboard",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = GrayText
+                )
+                Text(
+                    text = "Last updated: $lastSyncTime",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GrayDark
+                )
+            }
+            
+            // Connection indicator
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(
+                            when (connectionStatus) {
+                                "Connected" -> SuccessGreen
+                                "Offline" -> ErrorRed
+                                else -> WarningOrange
+                            }
+                        )
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = connectionStatus,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = GrayDark
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Security Score Card
+            item {
+                SecurityScoreCard(
+                    score = animatedScore,
+                    isLoading = isLoading,
+                    onDetailsClick = onNavigateToSecurity
+                )
+            }
+            
+            // Real-time Metrics
+            item {
+                Text(
+                    text = "Real-time Metrics",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = GrayText,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(metrics) { metric ->
+                        MetricCard(metric = metric)
+                    }
+                }
+            }
+            
+            // Security Alerts
+            if (securityAlerts.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Security Alerts",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = GrayText,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                
+                items(securityAlerts) { alert ->
+                    SecurityAlertCard(alert = alert)
+                }
+            }
+            
+            // Quick Actions
+            item {
+                Text(
+                    text = "Quick Actions",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = GrayText,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(quickActions) { action ->
+                        QuickActionCard(action = action)
+                    }
+                }
+            }
+            
+            // All Tools Button
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = onNavigateToTools,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = LightBlue,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Apps,
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(
+                        text = "View All Tools",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecurityScoreCard(
+    score: Int,
+    isLoading: Boolean,
+    onDetailsClick: () -> Unit
+) {
+    NeumorphicCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(180.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Security Score",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = GrayText
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                if (isLoading) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(4.dp),
+                        color = LightBlue,
+                        trackColor = BackgroundSecondary
+                    )
+                } else {
+                    Text(
+                        text = "$score/100",
+                        style = MaterialTheme.typography.displayMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = when {
+                            score >= 85 -> SuccessGreen
+                            score >= 70 -> WarningOrange
+                            else -> ErrorRed
+                        }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    Text(
+                        text = when {
+                            score >= 85 -> "Excellent Protection"
+                            score >= 70 -> "Good Security"
+                            score >= 50 -> "Needs Attention"
+                            else -> "Security Risk"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = GrayDark
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                OutlinedButton(
+                    onClick = onDetailsClick,
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = LightBlue
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, LightBlue)
+                ) {
+                    Text("View Details")
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        imageVector = Icons.Default.ArrowForward,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            
+            // Security score visualization
+            Box(
+                modifier = Modifier.size(120.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    progress = if (isLoading) 0f else (score / 100f),
+                    modifier = Modifier.size(100.dp),
+                    strokeWidth = 8.dp,
+                    color = when {
+                        score >= 85 -> SuccessGreen
+                        score >= 70 -> WarningOrange
+                        else -> ErrorRed
+                    },
+                    trackColor = BackgroundSecondary
+                )
+                
+                Icon(
+                    imageVector = Icons.Default.Security,
+                    contentDescription = null,
+                    tint = LightBlue,
+                    modifier = Modifier.size(36.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MetricCard(metric: DashboardMetric) {
+    NeumorphicCard(
+        modifier = Modifier
+            .width(140.dp)
+            .height(100.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = metric.icon,
+                contentDescription = null,
+                tint = metric.color,
+                modifier = Modifier.size(28.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = metric.value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = GrayText,
+                textAlign = TextAlign.Center
+            )
+            
+            Text(
+                text = metric.title,
+                style = MaterialTheme.typography.labelSmall,
+                color = GrayDark,
+                textAlign = TextAlign.Center
+            )
+            
+            metric.change?.let { change ->
+                Text(
+                    text = change,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (metric.isPositiveChange) SuccessGreen else ErrorRed,
+                    fontSize = 10.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SecurityAlertCard(alert: SecurityAlert) {
+    NeumorphicCard(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Severity indicator
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(alert.severity.color.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = when (alert.severity) {
+                        AlertSeverity.HIGH -> Icons.Default.Error
+                        AlertSeverity.MEDIUM -> Icons.Default.Warning
+                        AlertSeverity.LOW -> Icons.Default.Info
+                        AlertSeverity.INFO -> Icons.Default.Notifications
+                    },
+                    contentDescription = null,
+                    tint = alert.severity.color,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = alert.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = GrayText
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = alert.message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = GrayDark
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = alert.timestamp,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = GrayDark.copy(alpha = 0.7f)
+                )
+                
+                alert.actionText?.let { actionText ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    TextButton(
+                        onClick = { alert.onAction?.invoke() },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = alert.severity.color
+                        )
+                    ) {
+                        Text(actionText)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickActionCard(action: QuickAction) {
+    NeumorphicCard(
+        modifier = Modifier
+            .width(120.dp)
+            .height(110.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(action.color.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = action.icon,
+                    contentDescription = null,
+                    tint = action.color,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            Text(
+                text = action.title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = GrayText,
+                textAlign = TextAlign.Center
+            )
+            
+            Text(
+                text = action.subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = GrayDark,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+private suspend fun loadDashboardData(
+    repository: EnhancedGuardixRepository,
+    onSecurityScore: (Int) -> Unit,
+    onConnectionStatus: (String) -> Unit,
+    onMemoryUsage: (String) -> Unit,
+    onCpuUsage: (String) -> Unit,
+    onNetworkUsage: (String) -> Unit,
+    onStorageUsage: (String) -> Unit,
+    onSecurityAlerts: (List<SecurityAlert>) -> Unit,
+    onLastSync: (String) -> Unit,
+    onComplete: () -> Unit
+) {
+    try {
+        // Security overview
+        val overview = repository.getSecurityOverview()
+        if (overview.isSuccess && overview.data != null) {
+            onSecurityScore(overview.data.securityScore)
+            val alerts = overview.data.recentEvents.map {
+                SecurityAlert(
+                    title = it["type"]?.toString() ?: "Security Event",
+                    message = "Source: ${it["source"] ?: "system"}, Severity: ${it["severity"] ?: "low"}",
+                    severity = when ((it["severity"]?.toString() ?: "low").lowercase()) {
+                        "high" -> AlertSeverity.HIGH
+                        "medium" -> AlertSeverity.MEDIUM
+                        "low" -> AlertSeverity.LOW
+                        else -> AlertSeverity.INFO
+                    },
+                    timestamp = it["timestamp"]?.toString() ?: ""
+                )
+            }
+            onSecurityAlerts(alerts)
+        }
+
+        // Memory status
+        val memory = repository.getMemoryStatus()
+        if (memory.isSuccess && memory.data != null) {
+            onMemoryUsage("${memory.data.usagePercent.toInt()}%")
+        } else onMemoryUsage("--")
+
+        // Network usage
+        val net = repository.getNetworkUsage()
+        if (net.isSuccess && net.data != null) {
+            val speed = net.data.usageStats.downloadSpeed
+            onNetworkUsage("${speed.toInt()} Mbps")
+        } else onNetworkUsage("--")
+
+        // Storage overview
+        val storage = repository.getStorageOverview()
+        if (storage.isSuccess && storage.data != null) {
+            onStorageUsage("${storage.data.usagePercentage.toInt()}%")
+        } else onStorageUsage("--")
+
+        // CPU usage not directly available from backend mock; mark N/A
+        onCpuUsage("N/A")
+
+        // Connection status
+        val connected = overview.isSuccess || memory.isSuccess || net.isSuccess || storage.isSuccess
+        onConnectionStatus(if (connected) "Connected" else "Offline")
+
+        onLastSync("Just now")
+    } finally {
+        onComplete()
+    }
+}

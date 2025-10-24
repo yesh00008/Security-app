@@ -1,0 +1,137 @@
+{
+  "info": {
+    "name": "Guardix API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {"raw": "{{base}}/auth/login", "host": ["{{base}}"], "path": ["auth", "login"]},
+        "body": {"mode": "raw", "raw": "{\n  \"user_id\": \"demo\"\n}"}
+      }
+    },
+    {
+      "name": "Scan APK",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {"raw": "{{base}}/scan/apk", "host": ["{{base}}"], "path": ["scan", "apk"]},
+        "body": {"mode": "raw", "raw": "{\n  \"package_name\": \"com.example.app\",\n  \"features\": {\n    \"permissions\": [\"INTERNET\", \"READ_SMS\"],\n    \"api_calls\": [\"okhttp\"],\n    \"behaviors\": [\"net\"]\n  }\n}"}
+      }
+    },
+    {
+      "name": "Scan Phishing",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {"raw": "{{base}}/scan/phishing", "host": ["{{base}}"], "path": ["scan", "phishing"]},
+        "body": {"mode": "raw", "raw": "{\n  \"url\": \"http://phish.me/login\"\n}"}
+      }
+    },
+    {
+      "name": "Biometric Auth",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {"raw": "{{base}}/auth/biometric", "host": ["{{base}}"], "path": ["auth", "biometric"]},
+        "body": {"mode": "raw", "raw": "{\n  \"user_id\": \"demo\",\n  \"sample\": {\n    \"keystroke_timings\": [120,130,110,125],\n    \"touch_pressure\": [0.4,0.41,0.39],\n    \"touch_intervals\": [80,75,82]\n  }\n}"}
+      }
+    },
+    {
+      "name": "IDS Monitor",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {"raw": "{{base}}/monitor/ids", "host": ["{{base}}"], "path": ["monitor", "ids"]},
+        "body": {"mode": "raw", "raw": "{\n  \"traffic\": [\n    {\"bytes_in\": 1500, \"bytes_out\": 1400, \"connections\": 6, \"failed_auth\": 0},\n    {\"bytes_in\": 6000, \"bytes_out\": 5000, \"connections\": 25, \"failed_auth\": 4}\n  ]\n}"}
+      }
+    },
+    {
+      "name": "Models Summary",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "url": {"raw": "{{base}}/models/", "host": ["{{base}}"], "path": ["models"]}
+      }
+    },
+    {
+      "name": "Behavior Anomaly",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {"raw": "{{base}}/anomaly/behavior", "host": ["{{base}}"], "path": ["anomaly", "behavior"]},
+        "body": {"mode": "raw", "raw": "{\n  \"metrics\": [45, 52, 28, 7, 115]\n}"}
+      }
+    },
+    {
+      "name": "System Anomaly",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {"raw": "{{base}}/anomaly/system", "host": ["{{base}}"], "path": ["anomaly", "system"]},
+        "body": {"mode": "raw", "raw": "{\n  \"metrics\": [36, 11, 78, 0.6]\n}"}
+      }
+    },
+    {
+      "name": "Performance One Tap",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"},
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {"raw": "{{base}}/performance/one-tap", "host": ["{{base}}"], "path": ["performance", "one-tap"]},
+        "body": {"mode": "raw", "raw": "{\n  \"aggressive_mode\": false,\n  \"include_cache_clean\": true,\n  \"include_storage_clean\": true\n}"}
+      }
+    },
+    {
+      "name": "Network Usage",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "url": {"raw": "{{base}}/network-tools/usage", "host": ["{{base}}"], "path": ["network-tools", "usage"]}
+      }
+    },
+    {
+      "name": "Storage Overview",
+      "request": {
+        "method": "GET",
+        "header": [
+          {"key": "Authorization", "value": "Bearer {{token}}"}
+        ],
+        "url": {"raw": "{{base}}/storage/storage-overview", "host": ["{{base}}"], "path": ["storage", "storage-overview"]}
+      }
+    }
+  ],
+  "variable": [
+    {"key": "base", "value": "http://127.0.0.1:8000"},
+    {"key": "token", "value": ""}
+  ]
+}
